@@ -35,6 +35,9 @@
     "superagent": "^7.0.1"
   },
   "devDependencies": {
+    "@types/shortid": "^0.0.32",
+    "@types/simple-peer": "^9.11.8",
+    "@types/socket.io-client": "^1.4.36",
     "browserify": "^17.0.0",
     "envify": "^4.1.0",
     "esmify": "^2.1.1",
