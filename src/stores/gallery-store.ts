@@ -1,10 +1,12 @@
 import Gallery from './gallery.js'
-let sketches
+import { IState } from 'choo'
+import { default as Nanobus } from 'nanobus'
+let sketches: typeof Gallery = undefined;
 
-export default function galleryStore(state, emitter) {
+export default function galleryStore(state: IState, emitter: Nanobus) {
     emitter.on('DOMContentLoaded', function () {
    
-        sketches = new Gallery((code, sketchFromURL) => {
+        sketches = new Gallery((code: string, sketchFromURL: boolean) => {
           emitter.emit('load and eval code', code, false)
           if(sketchFromURL) {
             emitter.emit('ui: hide info')
@@ -40,9 +42,9 @@ export default function galleryStore(state, emitter) {
       emitter.on('gallery:shareSketch', function () {
         let editor = state.editor.editor
         const editorText = editor.getValue()
-        emitter.emit('repl: eval', editorText, (code, error) => {
+        emitter.emit('repl: eval', editorText, (code:string, error: ErrorEvent) => {
             if (!error) {
-                showConfirmation((name) => {
+                showConfirmation((name: string) => {
                   sketches.shareSketch(editorText, state.hydra.hydra, name)
                 }, () => { })
               } else {
@@ -65,7 +67,7 @@ export default function galleryStore(state, emitter) {
       })
 }
 
-function showConfirmation(successCallback, terminateCallback) {
+function showConfirmation(successCallback: (...args: any[]) => any, terminateCallback: (...args: any[]) => any) {
   var c = prompt(`
 
 HYDRA SKETCH GALLERY

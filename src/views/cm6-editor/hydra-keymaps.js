@@ -15,7 +15,7 @@ export default (emit) => {
         return {
         key: key,
         run: () => { 
-            console.log(val)
+            console.log('keymap', val)
             emit(val) 
         }
       }})

@@ -13,6 +13,7 @@ type PatchBayOptions = {
   id?: string;
   peerOptions: SimplePeer.Options;
   stream: MediaStream;
+  // XG - todo: remove this any
   room: any;
 }
 
@@ -28,6 +29,7 @@ class PatchBay extends events {
   }>;
   _peerOptions: SimplePeer.Options;
   stream: MediaStream;
+  // XG - todo: remove this any
   _room: any;
   iceServers: RTCIceServer[]
 

@@ -10,7 +10,7 @@ export function flashDecoration() {
     class {
       decorations = Decoration.none;
 
-      update({ transactions }) {
+      update({ transactions }:  {transactions: Transaction[] }) {
         for (let tr of transactions) {
           this.decorations = this.decorations.map(tr.changes);
 

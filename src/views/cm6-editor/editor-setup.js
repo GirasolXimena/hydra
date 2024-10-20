@@ -9,7 +9,7 @@ import {searchKeymap, highlightSelectionMatches} from "@codemirror/search"
 import {autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap} from "@codemirror/autocomplete"
 import {lintKeymap} from "@codemirror/lint"
 import { oneDark, oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
-import { hydraSyntaxStyle, hydraEditorTheme } from "./hydra-cm6-theme.js";
+import { hydraSyntaxStyle, hydraEditorTheme } from "./hydra-cm6-theme";
 // import { flashTheme } from './flash-code/flashTheme.js';
 //  import { flash } from './flash-code'
 

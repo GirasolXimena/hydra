@@ -1,11 +1,12 @@
 
-import { getLine, getBlock, getSelection, getAll } from './flash-code/flashKeymaps.js'
-import hydraKeys from './_____keymap-config.js'
+import { getLine, getBlock, getSelection, getAll } from './flash-code/flashKeymaps'
+import hydraKeys from './_____keymap-config'
 
 // let evalLinter = new Compartment
 export default Object.entries(hydraKeys).map(([key, val]) => ({
     key: key,
-    run: (view) => {
+    // todo: XG - Remove this any
+    run: (view: any) => {
         console.log('called event', val, view)
         let text = ''
         if (val === 'editor:evalLine') {

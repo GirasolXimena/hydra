@@ -52,6 +52,7 @@ export default class Editor extends EventEmitter {
   }
 
   getValue() {
+    console.log('getting val')
     this.cm.state.doc.toString()
   }
 
@@ -66,6 +67,7 @@ export default class Editor extends EventEmitter {
   }
 
   addCodeToTop(code = '') {
+    console.log('adding cooode to top')
     this.cm.dispatch({
       changes: {from: 0, insert: `${code}\n\n`}
     })

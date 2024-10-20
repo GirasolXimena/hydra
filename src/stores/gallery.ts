@@ -1,11 +1,27 @@
 import request from 'superagent'
 import examples from './examples.json'
-const sketches = []
+import { IState } from 'choo'
+import { default as Nanobus } from 'nanobus'
+let sketches: Sketch[] = []
 
 const license = `// licensed with CC BY-NC-SA 4.0 https://creativecommons.org/licenses/by-nc-sa/4.0/`
 
+type Sketch = {
+  sketch_id: string;
+  code: string;
+}
 export default class Gallery {
-  constructor(callback, state, emitter) {
+  sketches: Sketch[]
+  examples: Sketch[]
+  current: Sketch | null;
+  code: string | null;
+  exampleIndex: number | null;
+  state: IState
+  emitter: Nanobus
+  serverURL: string;
+  url?: string;
+  searchParams: URLSearchParams
+  constructor(callback: (...args: any[]) => any, state: IState, emitter: Nanobus) {
     this.sketches = []
     this.examples = []
     this.current = null
@@ -14,6 +30,7 @@ export default class Gallery {
     this.state = state
     this.emitter = emitter
     this.serverURL = this.state.serverURL === null ? '' : this.state.serverURL
+    this.searchParams = new URLSearchParams();
     // request.get('/sketches').end((err, res) => {
     //   console.log('got sketches', res.text, err)
     //   if(err) {
@@ -159,14 +176,14 @@ export default class Gallery {
     this.url = newurl
   }
 
-  encodeBase64(text) {
+  encodeBase64(text: string) {
     return btoa(encodeURIComponent(text))
   }
-  decodeBase64(base64Code) {
+  decodeBase64(base64Code: string) {
     return decodeURIComponent(atob(base64Code))
   }
 
-  setSketch(sketch) {
+  setSketch(sketch: Sketch) {
     let code = this.decodeBase64(sketch.code)
     if (code.indexOf(license) < 0)
       code =
@@ -219,7 +236,7 @@ ${code}
           .attach('previewImage', img)
           .query({
             url: this.url,
-            sketch_id: this.current.sketch_id,
+            sketch_id: this?.current?.sketch_id,
             name: name
           })
           // .send({
@@ -298,9 +315,9 @@ ${code}
     this.url = newurl
   }
 
-  getExampleById(id) {
+  getExampleById(id: string) {
     //console.log('looking for', id, this.examples, this.sketches)
-    var sketches = this.examples.filter((sketch) => sketch.sketch_id === id)
+    this.sketches = this.examples.filter((sketch) => sketch.sketch_id === id)
     if (sketches.length <= 0) sketches = this.sketches.filter((sketch) => sketch.sketch_id === id)
     return sketches[0]
   }

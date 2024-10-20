@@ -8,7 +8,7 @@ import galleryStore from './src/stores/gallery-store.js'
 
 import mainView from './src/views/main.js'
 
-const app = choo()
+const app = new choo()
 app.use(devtools())
 app.use(store)
 app.use(editorStore)
