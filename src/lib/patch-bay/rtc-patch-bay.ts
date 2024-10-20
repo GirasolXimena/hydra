@@ -2,7 +2,7 @@
 
 
 import io from 'socket.io-client'
-import SimplePeer from 'simple-peer'
+import SimplePeer, { SignalData, SimplePeerData } from 'simple-peer'
 import { EventEmitter as events } from 'events'
 import shortid from 'shortid'
 
@@ -22,16 +22,17 @@ class PatchBay extends events {
   signaller: SocketIOClient.Socket;
   id: string;
   settings: Record<PatchBaySettings, boolean>;
-  rtcPeers: Record<string, any>;
+  rtcPeers: Record<string, SimplePeer.Instance & SimplePeer.Options>;
   peers: Record<string, SimplePeer.SimplePeer & {
     rtcPeer: string | null;
   }>;
   _peerOptions: SimplePeer.Options;
   stream: MediaStream;
   _room: any;
-  iceServers: string[]
+  iceServers: RTCIceServer[]
 
   constructor(options: PatchBayOptions) {
+    console.error('room', options.room)
     super()
     // connect to websocket signalling server. To DO: error validation
     this.signaller = io(options.server)
@@ -45,11 +46,14 @@ class PatchBay extends events {
     this._peerOptions = options.peerOptions || {}
     this._room = options.room
 
+    this.settings = {
+     shareMediaWhenInitiating: true,
+     shareMediaWhenRequested: false,
+     requestMediaWhenInitiating: true,
+     autoconnect: false 
+    }
 
-    this.settings['shareMediaWhenRequested'] = true
-    this.settings['shareMediaWhenInitiating'] = false
-    this.settings['requestMediaWhenInitiating'] = true
-    this.settings['autoconnect'] = false
+    this.iceServers = []
 
     //object containing ALL peers in room
     this.peers = {}
@@ -71,24 +75,24 @@ class PatchBay extends events {
     this.signaller.on('new peer', this._newPeer.bind(this))
   }
   // send data to all connected peers via data channels
-  sendToAll(data) {
-    Object.keys(this.rtcPeers).forEach(function (id) {
+  sendToAll(data: SimplePeer.SimplePeerData) {
+    Object.keys(this.rtcPeers).forEach((id) => {
       this.rtcPeers[id].send(data)
     }, this)
   }
   // sends to peer specified b
-  sendToPeer(peerId, data) {
+  sendToPeer(peerId: string, data: SimplePeer.SimplePeerData) {
     if (peerId in this.rtcPeers) {
       this.rtcPeers[peerId].send(data)
     }
   }
   reinitAll() {
-    Object.keys(this.rtcPeers).forEach(function (id) {
-      this.reinitPeer(id)
-    }.bind(this))
+    Object.keys(this.rtcPeers).forEach((id: string) => {
+      this.reinitRtcConnection(id)
+    }, this)
     //  this._connectToPeers.bind(this)
   }
-  initRtcPeer(id, opts) {
+  initRtcPeer(id: string, opts: SimplePeer.Options) {
     this.emit('new peer', { id: id })
     var newOptions = opts
     // console.log()
@@ -105,7 +109,7 @@ class PatchBay extends events {
         }
       }
       if (this.settings.requestMediaWhenInitiating === true) {
-        newOptions.offerConstraints = {
+        newOptions.offerOptions = {
           offerToReceiveVideo: true,
           offerToReceiveAudio: true
         }
@@ -122,14 +126,14 @@ class PatchBay extends events {
     this.rtcPeers[id] = new SimplePeer(options)
     this._attachPeerEvents(this.rtcPeers[id], id)
   }
-  reinitRtcConnection(id, opts = undefined) {
+  reinitRtcConnection(id: string, opts: SimplePeer.Options = {}) {
     // Because renegotiation is not implemeneted in SimplePeer, reinitiate connection when configuration has changed
-    this.rtcPeers[id]._destroy(null, function (e) {
+    this.rtcPeers[id]._destroy(null, (e) => {
       this.initRtcPeer(id, {
-        stream: this.stream,
-        initiator: true
+        stream: opts.stream || this.stream,
+        initiator: opts.initiator || true,
       })
-    }.bind(this))
+    })
   }
 
   
@@ -146,9 +150,12 @@ class PatchBay extends events {
   }
   // // Once the new peer receives a list of connected peers from the server,
   // // creates new simple peer object for each connected peer.
-  _readyForSignalling({ peers, servers }) {
+  _readyForSignalling({ peers, servers }: {
+    peers: string[];
+    servers: RTCIceServer[]
+  }) {
     //console.log("received peer list", _t, this.peers)
-    peers.forEach((peer) => {
+    peers.forEach((peer: string) => {
       this._newPeer(peer)
     })
 
@@ -160,7 +167,7 @@ class PatchBay extends events {
     this.emit('ready')
   }
   // Init connection to RECEIVE video
-  initConnectionFromId(id, callback) {
+  initConnectionFromId(id: string, callback: () => void) {
     //  console.log("initianing connection")
     if (id in this.rtcPeers) {
       console.log("Already connected to..", id, this.rtcPeers)
@@ -177,7 +184,11 @@ class PatchBay extends events {
     }
   }
   // receive signal from signalling server, forward to simple-peer
-  _handleMessage(data) {
+  _handleMessage(data: {
+    id: string;
+    type: string;
+    message: SignalData;
+  }) {
     // if there is currently no peer object for a peer id, that peer is initiating a new connection.
     if (data.type === 'signal') {
       this._handleSignal(data)
@@ -186,7 +197,10 @@ class PatchBay extends events {
     }
   }
   // receive signal from signalling server, forward to simple-peer
-  _handleSignal(data) {
+  _handleSignal(data: {
+    id: string;
+    message: SignalData
+  }) {
     // if there is currently no peer object for a peer id, that peer is initiating a new connection.
     if (!this.rtcPeers[data.id]) {
       // this.emit('new peer', data)
@@ -200,47 +214,48 @@ class PatchBay extends events {
   // sendToAll send through rtc connections, whereas broadcast
   // send through the signalling server. Useful in cases where
   // not all peers are connected via webrtc with other peers
-  _receivedBroadcast(data) {
+  _receivedBroadcast(data: SignalData) {
     //console.log("RECEIVED BROADCAST", data)
     this.emit('broadcast', data)
   }
   //sends via signalling server
-  broadcast(data) {
+  broadcast(data: SignalData) {
     this.signaller.emit('broadcast', data)
   }
   // handle events for each connected peer
-  _attachPeerEvents(p, _id) {
-    p.on('signal', function (id, signal) {
+  _attachPeerEvents(p: SimplePeer.Instance, id: string) {
+    p.on('signal', (id: string, signal: SignalData) => {
       //  console.log('signal', id, signal)
       //  console.log("peer signal sending over sockets", id, signal)
       //  this.signaller.emit('signal', {id: id, signal: signal})
       this.signaller.emit('message', { id: id, message: signal, type: 'signal' })
-    }.bind(this, _id))
+    })
 
-    p.on('stream', function (id, stream) {
-      this.rtcPeers[id].stream = stream
+    p.on('stream', (id: string, stream: MediaStream) => {
+      this.rtcPeers[id].addStream(stream)
       //  console.log('E: stream', id, stream)
       //  console.log("received a stream", stream)
       this.emit('stream', id, stream)
-    }.bind(this, _id))
+    })
 
-    p.on('connect', function (id) {
+    p.on('connect', (id: string) => {
       //  console.log("connected to ", id)
       this.emit('connect', id)
-    }.bind(this, _id))
+    })
 
-    p.on('data', function (id, data) {
+    p.on('data', (id: string, data: SimplePeerData) => {
       //    console.log('data', id)
+      data = String(data)
       this.emit('data', { id: id, data: JSON.parse(data) })
-    }.bind(this, _id))
+    })
 
-    p.on('close', function (id) {
+    p.on('close', (id: string) => {
       //console.log('CLOSED')
       delete (this.rtcPeers[id])
       this.emit('close', id)
-    }.bind(this, _id))
+    })
 
-    p.on('error', function (e) {
+    p.on('error', (e) => {
       console.warn("simple peer error", e)
     })
   }

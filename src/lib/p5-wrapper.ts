@@ -1,28 +1,36 @@
-//'use babel'
+import p5 from 'p5'
 
-// const p5lib = require('p5')
-
-export default class P5 extends p5{
-  constructor ({
+export default class P5 extends p5 {
+  width: number;
+  height: number;
+  mode: p5.RENDERER;
+  canvas: HTMLCanvasElement;
+  constructor({
     width = window.innerWidth,
     height = window.innerHeight,
-    mode = 'P2D'
+    mode = 'p2d'
+  }: {
+    width?: number;
+    height?: number;
+    mode?: p5.RENDERER
   } = {}) {
     //console.log('createing canvas', width, height, window.innerWidth, window.innerHeight)
-    super(( p ) => {
-      p.setup = () => { p.createCanvas(width, height, p[mode]) }
-  //    p.setup = () => { p.createCanvas() }
+    const hydraUI = document.createElement('canvas')
+    super((p: p5) => {
+      p.setup = () => { p.createCanvas(width, height, mode, hydraUI) }
+      //    p.setup = () => { p.createCanvas() }
       p.draw = () => { }
-    }, 'hydra-ui')
+    }, hydraUI)
     this.width = width
     this.height = height
     this.mode = mode
+    this.canvas = hydraUI
     this.canvas.style.position = "absolute"
     this.canvas.style.top = "0px"
     this.canvas.style.left = "0px"
-    this.canvas.style.zIndex = -1
+    this.canvas.style.zIndex = "-1"
     // console.log('p5', this)
-  //  return this.p5
+    //  return this.p5
   }
 
   show() {
@@ -36,6 +44,7 @@ export default class P5 extends p5{
   // p5 clear function not covering canvas
   clear() {
     this.drawingContext.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    return this;
   }
 }
 

@@ -2,7 +2,7 @@ import html from 'choo/html'
 import Component from 'choo/component'
 // import Hydra from 'hydra-synth'
 // const HydraSynth = require('./../../../../../hydra-synth')
-import P5 from './../lib/p5-wrapper.js'
+import P5 from './../lib/p5-wrapper.ts'
 import PatchBay from './../lib/patch-bay/pb-live.js'
 
 let pb
